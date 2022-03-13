@@ -16,7 +16,7 @@ function htmlTask(){
     //Copy to Dist Folder
     .pipe(dest("dist"))
 }
-exports.html = htmlTask
+// exports.html = htmlTask
   
 // JS Task
 var concat = require('gulp-concat');
@@ -33,7 +33,7 @@ var cssMin = require('gulp-clean-css')
 function cssTask(){
     return src(globs.css).pipe(concat("style.min.css")).pipe(cssMin()).pipe(dest('dist/assets'))
 }
-exports.css = cssTask
+// exports.css = cssTask
   
 
 //Imgs Task
@@ -42,22 +42,43 @@ const imgMin = require('gulp-imagemin')
 function imgTask(){
     return src("project/pics/*").pipe(imgMin()).pipe(dest("dist/images"))
 }
-exports.img = imgTask
+// exports.img = imgTask
 
 // Watch Task
 function watchTask(){
-    watch(globs.html,htmlTask)
-    watch(globs.css,cssTask)
-    watch(globs.js,jsTask)
+    watch(globs.html, series(htmlTask,reloadTask))
+    watch(globs.css, series(cssTask,reloadTask))
+    watch(globs.js, series(jsTask,reloadTask))
 }
 
-exports.default = series(parallel( htmlTask , jsTask , cssTask , imgTask) , watchTask)
+// Serve
+var browserSync = require('browser-sync');
+function serve (cb){
+  browserSync({
+    server: {
+      baseDir: 'dist/'
+    }
+  });
+  cb()
+}
 
-// const imagemin = require('gulp-imagemin');
+// Reload Task
+function reloadTask(done) {
+  browserSync.reload()
+  done()
+}
 
-// function imgMinify() {
-//     return gulp.src('project/pics/*')
-//         .pipe(imagemin())
-//         .pipe(gulp.dest('dist/images'));
-// }
-// exports.img = imgMinify
+
+exports.default = series( parallel(imgMinify, jsMinify, sassMinify, minifyHTML) , serve , watchTask)
+
+
+var gulp = require('gulp');
+var inject = require('gulp-inject');
+ 
+gulp.task('index', function () {
+  var target = gulp.src('./project/index.html');
+  var sources = gulp.src(['./project/js/**/*.js', './project/css/**/*.css'], {read: false});
+ 
+  return target.pipe(inject(sources))
+    .pipe(gulp.dest('./dist/assets'));
+});
